@@ -198,8 +198,17 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
       })
     });
 
+    if (!res.ok) {
+       console.error("Gemini API returned error:", await res.text());
+       throw new Error("HTTP " + res.status);
+    }
+
     const data = await res.json();
-    const resultText = data.candidates[0].content.parts[0].text;
+    let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    
+    // Sometimes the LLM includes markdown fences even with responseMimeType
+    resultText = resultText.replace(/^```json\s*/, '').replace(/```\s*$/, '').trim();
+
     const parsed: AIResponsePayload = JSON.parse(resultText);
 
     // Clear expenses and location arrays if the intent is not log_journey to prevent poluting the timeline
@@ -232,16 +241,24 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
     }
 
     return {
-      response: parsed.response,
+      response: parsed.response || "好啦，其實我沒仔細聽你說什麼 🥺 但我陪你！",
       expenses: processedExpenses,
       location: processedLocation,
       travelPlan: parsed.travelPlan,
       postTripStatus: parsed.postTripStatus,
       newPhase
     };
-
-  } catch (err) {
-    console.error(err);
-    return { response: "哎呀，跟腱斷掉了！網路怪怪的，再說一次？😅", expenses: [], newPhase: currentPhase };
+  } catch (error) {
+    console.error("Error communicating with Gemini API:", error);
+    
+    // Return a graceful fallback instead of crashing the UI
+    return {
+      response: "系統好像怪怪的，我剛剛恍神了一下 😭 寶寶你可以重說一次嗎？",
+      expenses: [],
+      location: undefined,
+      travelPlan: undefined,
+      postTripStatus: undefined,
+      newPhase: currentPhase
+    };
   }
 }
