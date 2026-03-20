@@ -87,7 +87,7 @@ export default function MainApp() {
       role: 'user',
       content: text,
       timestamp: new Date(),
-      imageUrl
+      ...(imageUrl && { imageUrl })
     };
     setMessages(prev => [...prev, tempUserMsg]);
     setIsTyping(true);
