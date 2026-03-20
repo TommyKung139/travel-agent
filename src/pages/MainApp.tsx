@@ -53,31 +53,67 @@ export default function MainApp() {
 
   // Derive Expenses, Locations, and JourneyEntries from History
   const { expenses, locations, journeyEntries } = useMemo(() => {
-    const exps: ExpenseItem[] = [];
-    const locs: LocationPin[] = [];
-    const entries: JourneyEntry[] = [];
+    const expsMap = new Map<string, { exp: ExpenseItem, msg: ChatMessage }>();
+    const locsMap = new Map<string, { loc: LocationPin, msg: ChatMessage }>();
     
     messages.forEach(msg => {
       if (msg.role === 'user') {
-        if (msg.location) {
-          locs.push(msg.location);
-          entries.push({
-            id: `je-loc-${msg.id}`, time: msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            type: 'checkin', title: `📍 ${msg.location.name}`, detail: msg.location.description, location: msg.location.name
-          });
+        let foundLocation = msg.location;
+
+        // Fallback: If AI put location inside expense but forgot top-level location
+        if (!foundLocation && msg.expenses && msg.expenses.length > 0) {
+          const expWithLoc = msg.expenses.find(e => e.location);
+          if (expWithLoc && expWithLoc.location) {
+             foundLocation = { name: expWithLoc.location, description: `在${expWithLoc.location}的足跡`, timestamp: msg.timestamp };
+          }
         }
+
+        if (foundLocation) {
+          locsMap.set(foundLocation.name, { loc: foundLocation, msg });
+        }
+
         if (msg.expenses && msg.expenses.length > 0) {
           msg.expenses.forEach(exp => {
-            exps.push(exp);
-            entries.push({
-              id: `je-exp-${exp.id}`, time: exp.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-              type: 'expense', title: exp.description || '消費', amount: exp.amount, currency: exp.currency, category: exp.category
-            });
+            const key = `${exp.description}_${exp.amount}`;
+            expsMap.set(key, { exp, msg });
           });
         }
       }
     });
-    return { expenses: exps, locations: locs, journeyEntries: entries };
+
+    const exps: ExpenseItem[] = [];
+    const locs: LocationPin[] = [];
+    const entriesWithTime: { entry: JourneyEntry, timeMs: number }[] = [];
+
+    locsMap.forEach(({ loc, msg }, key) => {
+      locs.push(loc);
+      entriesWithTime.push({
+        entry: {
+          id: `je-loc-${msg.id}-${encodeURIComponent(key)}`, time: msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          type: 'checkin', title: `📍 ${loc.name}`, detail: loc.description, location: loc.name
+        },
+        timeMs: msg.timestamp.getTime()
+      });
+    });
+
+    expsMap.forEach(({ exp, msg }, key) => {
+      exps.push(exp);
+      entriesWithTime.push({
+        entry: {
+          id: `je-exp-${msg.id}-${encodeURIComponent(key)}`, time: msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          type: 'expense', title: exp.description || '消費', amount: exp.amount, currency: exp.currency, category: exp.category
+        },
+        timeMs: msg.timestamp.getTime()
+      });
+    });
+
+    entriesWithTime.sort((a, b) => a.timeMs - b.timeMs);
+    
+    return { 
+      expenses: exps, 
+      locations: locs, 
+      journeyEntries: entriesWithTime.map(e => e.entry) 
+    };
   }, [messages]);
 
   const handleSendMessage = async (text: string, imageUrl?: string) => {

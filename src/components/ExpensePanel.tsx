@@ -37,6 +37,16 @@ export default function ExpensePanel({ expenses }: { expenses: ExpenseItem[] }) 
     return totals;
   }, [expenses]);
 
+  const cardEntries = useMemo(() => {
+    const creditCards = expenses
+      .filter(exp => exp.paymentMethod && (exp.paymentMethod.includes('卡') || exp.paymentMethod.includes('Card')))
+      .reduce((acc, exp) => {
+         acc[exp.paymentMethod!] = exp.limitWarning || acc[exp.paymentMethod!] || '';
+         return acc;
+      }, {} as Record<string, string>);
+    return Object.entries(creditCards);
+  }, [expenses]);
+
   return (
     <div className="flex flex-col gap-6 p-4 h-full bg-background overflow-y-auto">
       {/* Total Card */}
@@ -96,6 +106,32 @@ export default function ExpensePanel({ expenses }: { expenses: ExpenseItem[] }) 
           </div>
         )}
       </div>
+
+      {/* Credit Card Limits */}
+      {cardEntries.length > 0 && (
+        <div className="bg-gradient-to-r from-pikmin-leaf/10 to-transparent p-4 rounded-xl border border-pikmin-leaf/20 shadow-sm mt-2">
+          <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+            💳 信用卡回饋狀態
+          </h3>
+          <div className="flex flex-col gap-2">
+            {cardEntries.map(([card, warning]) => (
+              <div key={card} className="bg-white/60 p-2.5 rounded-lg flex flex-col gap-1 border border-white/50 shadow-sm">
+                <span className="text-sm font-bold text-primary">{card}</span>
+                {warning ? (
+                  <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded w-fit border border-emerald-100 shadow-sm whitespace-pre-wrap">
+                    ⚠️ {warning}
+                  </span>
+                ) : (
+                  <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded w-fit border border-emerald-100 flex items-center gap-1 shadow-sm font-medium">
+                    ✨ 這張卡還很空，盡管刷吧！
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* Recent List */}
       <div className="flex flex-col gap-3 mt-2">
