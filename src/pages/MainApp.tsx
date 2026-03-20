@@ -105,19 +105,27 @@ export default function MainApp() {
       // Update the user msg with the extracted context data
       const finalUserMsg = { ...tempUserMsg, expenses: newExpenses, location: newLocation };
       
-      // If we are in Dev bypass, fall back to React state. If user exists, save to DB.
-      if (!user) {
+      // Attempt to save to DB, but fallback to local state if it fails (e.g. no DB initialized)
+      let dbFailed = false;
+      if (user) {
+        try {
+           await dbService.addMessage(user.uid, TRIP_ID, finalUserMsg);
+           await dbService.updateTripState(user.uid, TRIP_ID, {
+             phase: newPhase,
+             ...(newPlan && { travelPlan: newPlan }),
+             ...(newPostTrip && { postTripStatus: newPostTrip })
+           });
+        } catch (dbErr) {
+           console.warn("Firestore save failed, falling back to local state:", dbErr);
+           dbFailed = true;
+        }
+      }
+
+      if (!user || dbFailed) {
          setMessages(prev => prev.map(m => m.id === finalUserMsg.id ? finalUserMsg : m));
          if (newPlan) setTravelPlan(newPlan);
          if (newPostTrip) setPostTripStatus(newPostTrip);
          if (newPhase !== phase) setPhase(newPhase);
-      } else {
-         await dbService.addMessage(user.uid, TRIP_ID, finalUserMsg);
-         await dbService.updateTripState(user.uid, TRIP_ID, {
-           phase: newPhase,
-           ...(newPlan && { travelPlan: newPlan }),
-           ...(newPostTrip && { postTripStatus: newPostTrip })
-         });
       }
 
       if (newPhase !== phase) {
@@ -134,14 +142,19 @@ export default function MainApp() {
         timestamp: new Date()
       };
 
-      if (!user) {
-        setMessages(prev => [...prev, xiuniMsg]);
+      if (user && !dbFailed) {
+        try {
+          await dbService.addMessage(user.uid, TRIP_ID, xiuniMsg);
+        } catch (dbErr) {
+          console.warn("Firestore save failed for AI response, falling back to local state");
+          setMessages(prev => [...prev, xiuniMsg]);
+        }
       } else {
-        await dbService.addMessage(user.uid, TRIP_ID, xiuniMsg);
+        setMessages(prev => [...prev, xiuniMsg]);
       }
       
     } catch(err) {
-      console.error(err);
+      console.error("Critical error in message handling:", err);
     } finally {
       setIsTyping(false);
     }
