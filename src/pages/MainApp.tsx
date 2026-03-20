@@ -103,19 +103,22 @@ export default function MainApp() {
         newPhase
       } = await processUserMessage(text, messages, phase);
       
-      // Update the user msg with the extracted context data
-      const finalUserMsg = { ...tempUserMsg, expenses: newExpenses, location: newLocation };
+      // Strip out undefined fields so Firestore doesn't reject the save
+      const finalUserMsg: ChatMessage = { ...tempUserMsg };
+      if (newExpenses !== undefined) finalUserMsg.expenses = newExpenses;
+      if (newLocation !== undefined) finalUserMsg.location = newLocation;
       
       // Attempt to save to DB, but fallback to local state if it fails (e.g. no DB initialized)
       let dbFailed = false;
       if (user) {
         try {
            await dbService.addMessage(user.uid, TRIP_ID, finalUserMsg);
-           await dbService.updateTripState(user.uid, TRIP_ID, {
-             phase: newPhase,
-             ...(newPlan && { travelPlan: newPlan }),
-             ...(newPostTrip && { postTripStatus: newPostTrip })
-           });
+           
+           const tripUpdate: any = { phase: newPhase };
+           if (newPlan !== undefined) tripUpdate.travelPlan = newPlan;
+           if (newPostTrip !== undefined) tripUpdate.postTripStatus = newPostTrip;
+           
+           await dbService.updateTripState(user.uid, TRIP_ID, tripUpdate);
         } catch (dbErr) {
            console.warn("Firestore save failed, falling back to local state:", dbErr);
            dbFailed = true;

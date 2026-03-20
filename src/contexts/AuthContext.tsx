@@ -57,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = async () => {
+    localStorage.removeItem('shuni_dev_bypass');
     await signOut(auth);
   };
 

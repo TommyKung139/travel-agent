@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Map as MapIcon, CalendarHeart, Receipt, Heart } from 'lucide-react';
+import { X, CalendarHeart, Receipt, Heart } from 'lucide-react';
 import type { ExpenseItem, LocationPin } from '../services/ai';
+import FootprintMap from './FootprintMap';
 
 interface Props {
   isOpen: boolean;
@@ -39,13 +40,6 @@ export default function DailyRecapModal({ isOpen, onClose, expenses, locations }
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const currency = expenses[0]?.currency || 'TWD';
   const todayStr = new Intl.DateTimeFormat('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date());
-
-  // Mock polaroid photos to simulate Pikmin Bloom's daily lookback
-  const polaroids = [
-    { id: 1, rot: -8, x: -60, y: -20, src: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&q=80', delay: 3.0 },
-    { id: 2, rot: 5, x: 50, y: 30, src: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&q=80', delay: 3.3 },
-    { id: 3, rot: -3, x: -10, y: 110, src: 'https://images.unsplash.com/photo-1542051842857-e6e23caee659?w=400&q=80', delay: 3.6 },
-  ];
 
   if (!isOpen) return null;
 
@@ -98,65 +92,29 @@ export default function DailyRecapModal({ isOpen, onClose, expenses, locations }
               )}
             </AnimatePresence>
 
-            {/* Step 2: Locations (Map Pins falling) */}
-            <div className="w-full h-[180px] relative mt-8 flex justify-center items-end px-8">
-               {locations.map((loc, i) => (
-                 <AnimatePresence key={loc.name}>
-                   {step >= 2 && (
-                     <motion.div
-                       initial={{ y: -100, opacity: 0 }}
-                       animate={{ y: 0, opacity: 1 }}
-                       transition={{ type: 'spring', damping: 12, delay: i * 0.2 }}
-                       className="absolute flex flex-col items-center justify-end"
-                       style={{ 
-                          left: `${20 + (i * (60 / Math.max(1, locations.length - 1)))}%`,
-                          bottom: `${Math.random() * 40 + 20}px`,
-                          zIndex: 10 + i
-                       }}
-                     >
-                        <div className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-primary shadow-sm mb-1 truncate max-w-[80px]">
-                          {loc.name}
-                        </div>
-                        <div className="w-8 h-8 bg-pikmin-bloom rounded-full text-white flex items-center justify-center shadow-lg transform origin-bottom border-2 border-white">
-                          <MapPin size={16} className="fill-white text-pikmin-bloom" />
-                        </div>
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
-               ))}
-               
-               {/* No Locations Fallback */}
-               {locations.length === 0 && step >= 2 && (
-                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute bottom-10 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-sm text-white">
-                     🌱 今天沒有留下足跡呢
-                   </motion.div>
+            {/* Step 2: FootprintMap appearing */}
+            <AnimatePresence>
+               {step >= 2 && (
+                 <motion.div
+                   initial={{ opacity: 0, scale: 0.9 }}
+                   animate={{ opacity: 1, scale: 1 }}
+                   transition={{ duration: 1 }}
+                   className="w-11/12 mt-6 h-64 rounded-2xl overflow-hidden shadow-xl border-4 border-white z-20"
+                 >
+                   <FootprintMap locations={locations} />
+                 </motion.div>
                )}
-            </div>
+            </AnimatePresence>
 
-            {/* Step 3: Photos and Stats drop in */}
-            <div className="relative w-full flex-1 mt-4">
-              
-              {/* Polaroids */}
-              {polaroids.map((p) => (
-                <AnimatePresence key={p.id}>
-                  {step >= 3 && (
-                    <motion.div
-                      className="absolute left-1/2 top-0 w-32 h-36 bg-white p-2 pb-8 shadow-xl rounded-sm ml-[-4rem]"
-                      initial={{ y: -200, opacity: 0, rotate: p.rot - 20, x: p.x }}
-                      animate={{ y: p.y, opacity: 1, rotate: p.rot, x: p.x }}
-                      transition={{ type: 'spring', damping: 15, delay: p.delay - 2.8 }} // Normalize delay
-                      style={{ zIndex: p.id }}
-                    >
-                      <img src={p.src} alt="Memory" className="w-full h-full object-cover bg-muted" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              ))}
+            {/* No Locations Fallback */}
+            {locations.length === 0 && step >= 2 && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute bottom-1/2 bg-white/40 backdrop-blur-md px-6 py-3 rounded-full text-foreground shadow-sm">
+                  🌱 今天還沒有移動足跡喔！
+                </motion.div>
+            )}
 
-            </div>
-
-             {/* Step 4: Final Badge (Expense & Steps) */}
-             <AnimatePresence>
+            {/* Step 4: Final Badge (Expense & Steps) */}
+            <AnimatePresence>
                 {step >= 4 && (
                   <motion.div 
                     initial={{ scale: 0, opacity: 0, y: 50 }}
@@ -166,7 +124,7 @@ export default function DailyRecapModal({ isOpen, onClose, expenses, locations }
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-bold">
-                        <MapIcon size={14} className="text-pikmin-leaf" /> 新增足跡
+                        📍 新增足跡
                       </div>
                       <div className="text-2xl font-display font-black text-foreground">
                         {locations.length} <span className="text-sm font-medium opacity-60">個地點</span>

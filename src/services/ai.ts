@@ -150,6 +150,7 @@ INSTRUCTIONS:
    - "我今天" -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`. 
       * If user logs an expense but doesn't specify HOW they paid, your reply MUST ask: "這筆是用哪張卡刷的？還是付現？".
       * If user specifies a credit card (e.g. J卡, 玫瑰卡), humorously check their 'limit'. If the amount is large, set a 'limitWarning' and generously scold them!
+      * If user DOES NOT specify a location, your reply MUST ask them where they are: "你今天在哪裡花這筆錢的啊？打卡一下啦！".
    - Default -> "chat". Return a general Threads-style 8+9 reply. **DO NOT** extract expenses/locations.
 2. If intent is "plan_trip" or phase is "planning":
    - Ask for dates and locations if missing (isMissingPlanInfo = true).
