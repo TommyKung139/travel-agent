@@ -73,9 +73,6 @@ export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Pro
                    {card.rewardRate}
                  </div>
                  <div className="flex gap-2 mt-3 pt-3 border-t border-primary/10">
-                   <button className="flex-1 text-[10px] font-bold bg-primary hover:bg-primary-dark text-primary-foreground py-1.5 rounded-lg active:scale-95 transition-all shadow-sm">
-                     加入旅程錢包
-                   </button>
                    <a href={card.applyUrl} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold bg-background hover:bg-muted text-foreground border border-border py-1.5 rounded-lg text-center active:scale-95 transition-all flex items-center justify-center gap-1 shadow-sm">
                      線上申辦 <ChevronRight size={10} />
                    </a>

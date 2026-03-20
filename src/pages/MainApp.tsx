@@ -225,9 +225,9 @@ export default function MainApp() {
         <nav className="lg:hidden shrink-0 border-t border-border bg-card/80 backdrop-blur-md pb-safe">
           <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
             <TabItem icon={MessageCircle} label="對話" isActive={mobileTab === 'chat'} onClick={() => setMobileTab('chat')} />
-            <TabItem icon={Compass} label="旅遊規劃" isActive={mobileTab === 'plan'} onClick={() => setMobileTab('plan')} />
             <TabItem icon={Footprints} label="今日足跡" isActive={mobileTab === 'footprint'} onClick={() => setMobileTab('footprint')} />
             <TabItem icon={Wallet} label="今日花費" isActive={mobileTab === 'expense'} onClick={() => setMobileTab('expense')} />
+            <TabItem icon={Compass} label="旅遊規劃" isActive={mobileTab === 'plan'} onClick={() => setMobileTab('plan')} />
           </div>
         </nav>
       </main>

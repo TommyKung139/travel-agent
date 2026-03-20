@@ -66,7 +66,7 @@ export default function RightPanelTabs({ expenses, entries, locations, forceTab,
             )}
             {activeTab === 'footprint' && (
               <motion.div key="footprint" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="h-full">
-                <FootprintTab entries={entries} locations={locations} />
+                <FootprintTab entries={entries} locations={locations} expenses={expenses} />
               </motion.div>
             )}
             {activeTab === 'expense' && (

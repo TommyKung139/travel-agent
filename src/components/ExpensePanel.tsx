@@ -122,9 +122,15 @@ export default function ExpensePanel({ expenses }: { expenses: ExpenseItem[] }) 
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-foreground">{exp.description || expenseLabels[exp.category]}</span>
-                  <span className="text-xs text-pikmin-sky flex items-center gap-0.5">
+                  <span className="text-xs text-pikmin-sky flex items-center gap-1 mt-0.5">
                     {exp.location ? `📍 ${exp.location}` : `🌱 隨手記`}
+                    {exp.paymentMethod && <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">💳 {exp.paymentMethod}</span>}
                   </span>
+                  {exp.limitWarning && (
+                     <span className="text-[10px] text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 mt-1 w-fit max-w-[200px] truncate" title={exp.limitWarning}>
+                       ⚠️ {exp.limitWarning}
+                     </span>
+                  )}
                 </div>
               </div>
               <span className="font-display font-bold text-pikmin-earth bg-pikmin-cream/50 px-2 py-1 rounded-md text-sm">

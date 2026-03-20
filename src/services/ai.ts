@@ -8,6 +8,8 @@ export interface ExpenseItem {
   description: string;
   location?: string;
   timestamp: Date;
+  paymentMethod?: string;
+  limitWarning?: string;
 }
 
 export interface LocationPin {
@@ -145,7 +147,9 @@ INSTRUCTIONS:
 1. Identify intent strictly by user keywords:
    - "幫我規劃" -> "plan_trip". **DO NOT** extract expenses/locations.
    - "玩完了" -> "finish_trip". **DO NOT** extract expenses/locations.
-   - "我今天" -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`.
+   - "我今天" -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`. 
+      * If user logs an expense but doesn't specify HOW they paid, your reply MUST ask: "這筆是用哪張卡刷的？還是付現？".
+      * If user specifies a credit card (e.g. J卡, 玫瑰卡), humorously check their 'limit'. If the amount is large, set a 'limitWarning' and generously scold them!
    - Default -> "chat". Return a general Threads-style 8+9 reply. **DO NOT** extract expenses/locations.
 2. If intent is "plan_trip" or phase is "planning":
    - Ask for dates and locations if missing (isMissingPlanInfo = true).
@@ -162,7 +166,7 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
   "intent": "chat" | "plan_trip" | "finish_trip" | "log_journey",
   "isMissingPlanInfo": boolean,
   "isMissingFinishInfo": boolean,
-  "expenses": [ { "amount": 100, "currency": "TWD", "category": "food", "description": "...", "location": "..." } ],
+  "expenses": [ { "amount": 100, "currency": "TWD", "category": "food", "description": "...", "location": "...", "paymentMethod": "富邦J卡", "limitWarning": "你J卡回饋快爆了！下一筆換張刷！" } ],
   "location": { "name": "...", "description": "..." },
   "travelPlan": {
     "destination": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD",
