@@ -80,13 +80,14 @@ export default function MainApp() {
     return { expenses: exps, locations: locs, journeyEntries: entries };
   }, [messages]);
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, imageUrl?: string) => {
     // Optimistic user message
     const tempUserMsg: ChatMessage = {
       id: `msg-user-${Date.now()}`,
       role: 'user',
       content: text,
-      timestamp: new Date()
+      timestamp: new Date(),
+      imageUrl
     };
     setMessages(prev => [...prev, tempUserMsg]);
     setIsTyping(true);

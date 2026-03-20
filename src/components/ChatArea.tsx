@@ -5,7 +5,7 @@ import type { ChatMessage, ExpenseCategory } from '../services/ai';
 
 interface Props {
   messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, imageUrl?: string) => void;
   isTyping: boolean;
 }
 
@@ -21,6 +21,7 @@ const expenseIcons: Record<ExpenseCategory, string> = {
 export default function ChatArea({ messages, onSendMessage, isTyping }: Props) {
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,6 +32,14 @@ export default function ChatArea({ messages, onSendMessage, isTyping }: Props) {
     if (!input.trim()) return;
     onSendMessage(input.trim());
     setInput('');
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    onSendMessage('我今天花了一筆錢，這是收據，幫我記下來！', url);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -59,6 +68,13 @@ export default function ChatArea({ messages, onSendMessage, isTyping }: Props) {
               )}
               
               <div className={`flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                {/* Image Attachment */}
+                {msg.imageUrl && (
+                  <div className={`mb-1 overflow-hidden rounded-xl border border-border/50 shadow-sm max-w-[200px] sm:max-w-xs ${isUser ? 'self-end bg-primary/5' : 'self-start bg-muted/20'}`}>
+                    <img src={msg.imageUrl} alt="Attachment" className="w-full h-auto object-cover max-h-[300px]" />
+                  </div>
+                )}
+                
                 {/* Main Bubble */}
                 <div className={`px-4 py-3 shadow-sm text-[15px] leading-relaxed ${
                   isUser 
@@ -117,9 +133,10 @@ export default function ChatArea({ messages, onSendMessage, isTyping }: Props) {
       {/* Input Area */}
       <div className="p-3 bg-background border-t border-border mt-auto shrink-0 pb-safe">
         <form onSubmit={handleSubmit} className="flex items-end gap-2 bg-card border border-border rounded-2xl p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-primary/30 transition-shadow">
+          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
           <div className="flex items-center gap-1 self-end mb-1 ml-1 text-muted-foreground">
             <button type="button" className="p-2 hover:bg-muted hover:text-pikmin-sky rounded-full transition-colors"><MapPin size={20} /></button>
-            <button type="button" className="p-2 hover:bg-muted hover:text-pikmin-bloom rounded-full transition-colors"><Camera size={20} /></button>
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-muted hover:text-pikmin-bloom rounded-full transition-colors"><Camera size={20} /></button>
           </div>
           
           <textarea 

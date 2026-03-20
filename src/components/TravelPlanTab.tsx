@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CheckCircle2, Circle, AlertCircle, MapPin } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, AlertCircle, MapPin, ChevronRight, Gift } from 'lucide-react';
 import type { TravelPlan, PostTripStatus } from '../services/ai';
 
 interface Props {
@@ -56,6 +56,36 @@ export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Pro
         </div>
       </div>
 
+      {/* Pre-Trip Card Advisor */}
+      {travelPlan && travelPlan.suggestedCards && travelPlan.suggestedCards.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <h3 className="text-md font-bold text-foreground mb-4 flex items-center gap-2">
+            💳 專屬神卡推薦
+            <span className="text-[10px] bg-pikmin-sun text-pikmin-earth px-2 py-0.5 rounded-full ml-auto">咻妮精選</span>
+          </h3>
+          <div className="flex gap-4 overflow-x-auto pb-2 snap-x hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {travelPlan.suggestedCards.map((card, idx) => (
+              <div key={idx} className="shrink-0 w-[240px] snap-center bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden">
+                 <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-xl pointer-events-none" />
+                 <span className="text-[10px] font-bold text-primary tracking-wider">{card.bank}</span>
+                 <h4 className="text-sm font-bold text-foreground">{card.cardName}</h4>
+                 <div className="text-xs text-pikmin-leaf-dark bg-pikmin-leaf/20 border border-pikmin-leaf/30 px-2 py-1 rounded-md w-fit font-medium mt-1">
+                   {card.rewardRate}
+                 </div>
+                 <div className="flex gap-2 mt-3 pt-3 border-t border-primary/10">
+                   <button className="flex-1 text-[10px] font-bold bg-primary hover:bg-primary-dark text-primary-foreground py-1.5 rounded-lg active:scale-95 transition-all shadow-sm">
+                     加入旅程錢包
+                   </button>
+                   <a href={card.applyUrl} target="_blank" rel="noreferrer" className="flex-1 text-[10px] font-bold bg-background hover:bg-muted text-foreground border border-border py-1.5 rounded-lg text-center active:scale-95 transition-all flex items-center justify-center gap-1 shadow-sm">
+                     線上申辦 <ChevronRight size={10} />
+                   </a>
+                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Pre-Trip Checklist */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
         <h3 className="text-md font-bold text-foreground mb-4 flex items-center gap-2">
@@ -106,6 +136,22 @@ export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Pro
                           <div className="text-[11px] text-muted-foreground flex items-center gap-1">
                             <MapPin size={10} /> {act.location}
                           </div>
+                          
+                          {/* Coupons and Best Card Tags */}
+                          {(act.matchingCoupon || act.recommendedCard) && (
+                            <div className="flex flex-wrap gap-2 mt-1.5">
+                              {act.recommendedCard && (
+                                <span className="text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                  💳 刷 {act.recommendedCard}
+                                </span>
+                              )}
+                              {act.matchingCoupon && (
+                                <button className="text-[10px] font-bold bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded flex items-center gap-1 active:scale-95 transition-colors">
+                                  <Gift size={10} /> {act.matchingCoupon.title} ({act.matchingCoupon.discount})
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
