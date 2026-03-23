@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CheckCircle2, Circle, AlertCircle, MapPin, ChevronRight, Gift } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, AlertCircle, MapPin, ChevronRight, Gift, Pencil } from 'lucide-react';
 import type { TravelPlan, PostTripStatus } from '../services/ai';
+import { EditPlanSheet } from './planning/EditPlanSheet';
 
 interface Props {
   travelPlan?: TravelPlan;
   postTripStatus?: PostTripStatus;
   phase: 'idle' | 'planning' | 'traveling' | 'post_trip';
+  onUpdatePlan?: (plan: TravelPlan) => void;
 }
 
-export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Props) {
+export default function TravelPlanTab({ travelPlan, postTripStatus, phase, onUpdatePlan }: Props) {
   const [checklist, setChecklist] = useState({
     finance: false,
     transport: false,
@@ -18,6 +20,8 @@ export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Pro
     clothing: false,
     tickets: false
   });
+  
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const isPreTripDone = Object.values(checklist).every(v => v);
 
@@ -109,10 +113,20 @@ export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Pro
       </div>
 
       {/* Itinerary */}
-      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm relative">
         <h3 className="text-md font-bold text-foreground mb-4 flex items-center gap-2">
           🗺️ 預計行程安排
         </h3>
+        
+        {travelPlan && onUpdatePlan && (
+          <button 
+            onClick={() => setIsEditOpen(true)}
+            className="absolute top-4 right-4 text-muted-foreground hover:text-emerald-500 bg-emerald-50 hover:bg-emerald-100 p-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+          >
+            <Pencil size={14} /> 編輯
+          </button>
+        )}
+
         { travelPlan && travelPlan.itinerary?.length > 0 ? (
           <div className="flex flex-col gap-6">
             {travelPlan.itinerary.map((day, idx) => {
@@ -196,6 +210,15 @@ export default function TravelPlanTab({ travelPlan, postTripStatus, phase }: Pro
           <p className="text-[10px] mt-4 text-center text-muted-foreground">旅程結束後向咻妮報告「玩完了！」，就能在這裡解鎖成就拿專屬旅記喔！</p>
         )}
       </div>
+
+      {travelPlan && onUpdatePlan && (
+        <EditPlanSheet 
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          itinerary={travelPlan.itinerary || []}
+          onSave={(updatedItinerary) => onUpdatePlan({ ...travelPlan, itinerary: updatedItinerary })}
+        />
+      )}
 
     </div>
   );

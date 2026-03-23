@@ -70,7 +70,9 @@ export const dbService = {
       timestamp: expense.timestamp,
       expenses: [expense]
     };
-    await this.addMessage(uid, tripId, hiddenMsg);
+    
+    // Phase 16: Fire-and-forget background sync to avoid Vercel deadlocks on WebSocket
+    this.addMessage(uid, tripId, hiddenMsg).catch(err => console.warn("Background system msg sync failed", err));
 
     if (!expense.paymentMethod || expense.paymentMethod === 'Cash' || expense.paymentMethod === '現金') {
       return { status: 'cash', currentTotal: expense.amount, spendCap: 0 };

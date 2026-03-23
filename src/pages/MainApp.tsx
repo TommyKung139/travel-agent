@@ -141,6 +141,7 @@ export default function MainApp() {
           // Pass the entire history and current phase
           const { 
             response, 
+            actionRequired,
             expenses: newExpenses, 
             location: newLocation,
             travelPlan: newPlan,
@@ -189,6 +190,11 @@ export default function MainApp() {
 
           if (user) {
             dbService.addMessage(user.uid, TRIP_ID, xiuniMsg).catch(err => console.warn("Background AI msg sync failed:", err));
+          }
+
+          if (actionRequired === 'open_expense_sheet') {
+            // Slight delay ensures the message renders before the modal covers it
+            setTimeout(() => setIsExpenseSheetOpen(true), 500);
           }
         })(),
         masterTimeout
@@ -269,13 +275,21 @@ export default function MainApp() {
     }
   };
 
+  const handleUpdatePlan = (updatedPlan: TravelPlan) => {
+    setTravelPlan(updatedPlan);
+    if (user) {
+      // Fire and forget Firestore save
+      dbService.updateTripState(user.uid, TRIP_ID, { travelPlan: updatedPlan }).catch(console.warn);
+    }
+  };
+
   const renderContent = () => {
     switch (mobileTab) {
       case 'chat': return <ChatArea messages={messages} onSendMessage={handleSendMessage} isTyping={isTyping} />;
       default: return (
         <RightPanelTabs 
           expenses={expenses} entries={journeyEntries} locations={locations} forceTab={mobileTab as RightTabType} 
-          travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase}
+          travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase} onUpdatePlan={handleUpdatePlan}
         />
       );
     }
@@ -369,7 +383,7 @@ export default function MainApp() {
 
         <RightPanelTabs 
           expenses={expenses} entries={journeyEntries} locations={locations}
-          travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase}
+          travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase} onUpdatePlan={handleUpdatePlan}
         />
       </aside>
 

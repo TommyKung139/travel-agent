@@ -90,6 +90,7 @@ export interface PostTripStatus {
 export interface AIResponsePayload {
   response: string;
   intent: 'chat' | 'plan_trip' | 'finish_trip' | 'log_journey';
+  actionRequired?: 'open_expense_sheet'; // Phase 16: UI Trigger
   isMissingPlanInfo: boolean;
   isMissingFinishInfo: boolean;
   expenses: any[];
@@ -106,6 +107,7 @@ export async function processUserMessage(
   currentPhase: 'idle' | 'planning' | 'traveling' | 'post_trip'
 ): Promise<{
   response: string,
+  actionRequired?: 'open_expense_sheet',
   expenses: ExpenseItem[],
   location?: LocationPin,
   travelPlan?: TravelPlan,
@@ -147,8 +149,8 @@ INSTRUCTIONS:
 1. Identify intent strictly by user keywords:
    - "幫我規劃" -> "plan_trip". **DO NOT** extract expenses/locations.
    - "玩完了" -> "finish_trip". **DO NOT** extract expenses/locations.
-   - "我今天" or answering a previous question about location/payment -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`. 
-      * If user logs an expense but doesn't specify HOW they paid, your reply MUST ask: "這筆是用哪張卡刷的？還是付現？".
+   - "我今天", "記帳", "打卡", "花了" or answering a previous question about location/payment -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`. 
+      * If user logs an expense but doesn't specify HOW they paid or exact amount, your reply MUST set \`"actionRequired": "open_expense_sheet"\` and your \`response\` MUST say: "已幫你記錄到今日足跡及花費，寶寶來填一下詳細單子喔！" (in your Threads persona).
       * If user specifies a credit card (e.g. J卡, 玫瑰卡), you MUST generate a 'limitWarning'. Playfully mock their remaining reward limit (e.g. "你的中信卡回饋快乾啦！", "J卡本月回饋大失血啦！").
       * If user DOES NOT specify a location, your reply MUST ask them where they are: "你今天在哪裡花這筆錢的啊？打卡一下啦！".
    - Default -> "chat". Return a general Threads-style 8+9 reply. **DO NOT** extract expenses/locations.
@@ -165,6 +167,7 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
 {
   "response": "Your strictly Thread-style Tsundere reply (in zh-TW)",
   "intent": "chat" | "plan_trip" | "finish_trip" | "log_journey",
+  "actionRequired": "open_expense_sheet",
   "isMissingPlanInfo": boolean,
   "isMissingFinishInfo": boolean,
   "expenses": [ { "amount": 100, "currency": "TWD", "category": "food", "description": "...", "location": "...", "paymentMethod": "富邦J卡", "limitWarning": "你J卡回饋快爆了！下一筆換張刷！" } ],
@@ -247,6 +250,7 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
 
     return {
       response: parsed.response || "好啦，其實我沒仔細聽你說什麼 🥺 但我陪你！",
+      actionRequired: parsed.actionRequired,
       expenses: processedExpenses,
       location: processedLocation,
       travelPlan: parsed.travelPlan,

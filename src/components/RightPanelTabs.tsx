@@ -15,11 +15,12 @@ interface Props {
   travelPlan?: TravelPlan;
   postTripStatus?: PostTripStatus;
   phase?: 'idle' | 'planning' | 'traveling' | 'post_trip';
+  onUpdatePlan?: (plan: TravelPlan) => void;
 }
 
 export type RightTabType = 'plan' | 'footprint' | 'expense';
 
-export default function RightPanelTabs({ expenses, entries, locations, forceTab, onTabChange, travelPlan, postTripStatus, phase }: Props) {
+export default function RightPanelTabs({ expenses, entries, locations, forceTab, onTabChange, travelPlan, postTripStatus, phase, onUpdatePlan }: Props) {
   const [activeTab, setActiveTab] = useState<RightTabType>(forceTab || 'plan');
 
   // Sync with prop if mobile forces a change
@@ -61,7 +62,7 @@ export default function RightPanelTabs({ expenses, entries, locations, forceTab,
          <AnimatePresence mode="wait">
             {activeTab === 'plan' && (
               <motion.div key="plan" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="h-full">
-                <TravelPlanTab travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase || 'idle'} />
+                <TravelPlanTab travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase || 'idle'} onUpdatePlan={onUpdatePlan} />
               </motion.div>
             )}
             {activeTab === 'footprint' && (
