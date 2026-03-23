@@ -1,13 +1,46 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>app</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>記錄你的美好時光 - 咻妮</title>
+    <style>
+      #root:empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #FAFAF9; /* Tailwind background */
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #10B981; /* Tailwind emerald-500 */
+        font-weight: bold;
+        letter-spacing: 2px;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .loader {
+        width: 48px;
+        height: 48px;
+        border: 5px solid #E5E7EB;
+        border-bottom-color: #10B981;
+        border-radius: 50%;
+        display: inline-block;
+        box-sizing: border-box;
+        animation: rotation 1s linear infinite;
+      }
+      @keyframes rotation {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <span class="loader"></span>
+      <span>載入咻妮中... 🌱</span>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
