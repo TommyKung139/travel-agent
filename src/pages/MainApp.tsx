@@ -348,7 +348,7 @@ export default function MainApp() {
           
           {/* Floating Quick Action Button on Chat Tab */}
           {mobileTab === 'chat' && (
-            <div className="absolute -top-14 right-4 animate-bounce-slow">
+            <div className="absolute -top-24 right-4 animate-bounce-slow">
               <button 
                 onClick={() => setIsExpenseSheetOpen(true)}
                 className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/30 text-white rounded-full font-bold flex items-center gap-2 transition-transform active:scale-95 z-50 text-sm"
