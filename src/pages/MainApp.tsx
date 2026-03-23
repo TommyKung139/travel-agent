@@ -285,7 +285,7 @@ export default function MainApp() {
 
   const renderContent = () => {
     switch (mobileTab) {
-      case 'chat': return <ChatArea messages={messages} onSendMessage={handleSendMessage} isTyping={isTyping} />;
+      case 'chat': return <ChatArea messages={messages} onSendMessage={handleSendMessage} isTyping={isTyping} onOpenExpenseSheet={() => setIsExpenseSheetOpen(true)} />;
       default: return (
         <RightPanelTabs 
           expenses={expenses} entries={journeyEntries} locations={locations} forceTab={mobileTab as RightTabType} 
@@ -339,26 +339,12 @@ export default function MainApp() {
           
           {/* On Desktop: Always Render Chat in Center Area */}
           <div className="hidden lg:block h-full">
-            <ChatArea messages={messages} onSendMessage={handleSendMessage} isTyping={isTyping} />
+            <ChatArea messages={messages} onSendMessage={handleSendMessage} isTyping={isTyping} onOpenExpenseSheet={() => setIsExpenseSheetOpen(true)} />
           </div>
         </div>
 
         {/* Mobile Tab Bar */}
         <nav className="lg:hidden shrink-0 border-t border-border bg-card/80 backdrop-blur-md pb-safe relative">
-          
-          {/* Floating Quick Action Button on Chat Tab */}
-          {mobileTab === 'chat' && (
-            <div className="absolute -top-40 right-4 animate-bounce-slow">
-              <button 
-                onClick={() => setIsExpenseSheetOpen(true)}
-                className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/30 text-white rounded-full font-bold flex items-center gap-2 transition-transform active:scale-95 z-50 text-sm"
-              >
-                <PlusCircle className="w-4 h-4" />
-                快速記帳
-              </button>
-            </div>
-          )}
-
           <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
             <TabItem icon={MessageCircle} label="對話" isActive={mobileTab === 'chat'} onClick={() => setMobileTab('chat')} />
             <TabItem icon={Footprints} label="今日足跡" isActive={mobileTab === 'footprint'} onClick={() => setMobileTab('footprint')} />

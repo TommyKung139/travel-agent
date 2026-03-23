@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, MapPin, Send } from 'lucide-react';
+import { Camera, MapPin, Send, PlusCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { ChatMessage, ExpenseCategory } from '../services/ai';
 
@@ -7,6 +7,7 @@ interface Props {
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   isTyping: boolean;
+  onOpenExpenseSheet?: () => void;
 }
 
 const expenseIcons: Record<ExpenseCategory, string> = {
@@ -18,7 +19,7 @@ const expenseIcons: Record<ExpenseCategory, string> = {
   other: '📌'
 };
 
-export default function ChatArea({ messages, onSendMessage, isTyping }: Props) {
+export default function ChatArea({ messages, onSendMessage, isTyping, onOpenExpenseSheet }: Props) {
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +132,21 @@ export default function ChatArea({ messages, onSendMessage, isTyping }: Props) {
       </div>
 
       {/* Input Area */}
-      <div className="p-3 bg-background border-t border-border mt-auto shrink-0 pb-safe">
+      <div className="p-3 bg-background border-t border-border mt-auto shrink-0 pb-safe relative">
+        
+        {/* Floating Quick Action Button on Mobile */}
+        {onOpenExpenseSheet && (
+          <div className="absolute -top-14 right-4 animate-bounce-slow lg:hidden z-10 border-[3px] border-background rounded-full bg-background shadow-xl">
+            <button 
+              type="button"
+              onClick={onOpenExpenseSheet}
+              className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 outline-none text-white rounded-full font-bold flex items-center gap-2 transition-transform active:scale-95 text-sm m-[1px] shadow-emerald-500/30 shadow-lg"
+            >
+              <PlusCircle size={18} /> 快速記帳
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex items-end gap-2 bg-card border border-border rounded-2xl p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-primary/30 transition-shadow">
           <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
           <div className="flex items-center gap-1 self-end mb-1 ml-1 text-muted-foreground">
