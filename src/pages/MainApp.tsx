@@ -296,7 +296,7 @@ export default function MainApp() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background lg:flex-row overflow-hidden relative">
+    <div className="flex flex-col h-[100dvh] bg-background lg:flex-row overflow-hidden relative">
       {/* 
         DESKTOP LAYOUT: 
         Left Side: Main Chat (Flexible taking remaining space, Max width ~900px, centered if screen very wide)
