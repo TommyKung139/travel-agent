@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MessageCircle, Compass, Footprints, Wallet, LogOut } from 'lucide-react';
+import { MessageCircle, Compass, Footprints, Wallet, LogOut, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import ChatArea from '../components/ChatArea';
@@ -7,6 +7,7 @@ import RightPanelTabs, { type RightTabType } from '../components/RightPanelTabs'
 import type { ChatMessage, ExpenseItem, LocationPin, JourneyEntry, TravelPlan, PostTripStatus } from '../services/ai';
 import { processUserMessage } from '../services/ai';
 import { dbService } from '../services/db';
+import { ExpenseActionSheet } from '../components/accounting/ExpenseActionSheet';
 
 const dummyInitialMessage: ChatMessage = {
   id: 'msg-0',
@@ -23,6 +24,7 @@ export default function MainApp() {
   
   const [messages, setMessages] = useState<ChatMessage[]>([dummyInitialMessage]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isExpenseSheetOpen, setIsExpenseSheetOpen] = useState(false);
   
   const [phase, setPhase] = useState<'idle' | 'planning' | 'traveling' | 'post_trip'>('idle');
   const [travelPlan, setTravelPlan] = useState<TravelPlan | undefined>(undefined);
@@ -206,6 +208,67 @@ export default function MainApp() {
     }
   };
 
+  const handleExpenseSubmit = async (amount: number, description: string, paymentMethod: string) => {
+    // Generate new expense item
+    const expense: ExpenseItem = {
+      id: `exp-${Date.now()}`,
+      amount,
+      currency: 'TWD',
+      category: 'other',
+      description,
+      paymentMethod,
+      timestamp: new Date()
+    };
+
+    setIsTyping(true); // Show typing while evaluating
+
+    try {
+      let statusInfo: { status: 'cash' | 'safe' | 'warning', cardName: string, currentTotal: number, spendCap: number } = { 
+        status: 'safe', cardName: '', currentTotal: 0, spendCap: 0 
+      };
+      
+      // Calculate limit via backend
+      if (user) {
+        const res = await dbService.addTransactionWithCheck(user.uid, TRIP_ID, expense, expenses);
+        statusInfo = { ...res, cardName: res.cardName || '' };
+      } else {
+        // Fallback for anonymous
+        if (paymentMethod === '現金') statusInfo.status = 'cash';
+        else statusInfo = { status: 'safe', cardName: paymentMethod, currentTotal: 0, spendCap: 5000 };
+      }
+
+      // Generate exact Xiuni Response based on user prompt criteria
+      let xiuniText = "";
+      if (statusInfo.status === 'cash') {
+        xiuniText = "真假👀？現在還有人在用現金喔，破防了🫠。好啦幫你記上了，下次記得刷卡賺回饋帶咻妮去喝珍奶🥺🧋。";
+      } else if (statusInfo.status === 'warning') {
+        xiuniText = `欸不是寶寶，你這張 [${statusInfo.cardName}] 額度已經刷到 90% 以上了！你是要氣死咻妮嗎🤯🔪？下一筆結帳給我乖乖換別張卡，不然少賺的回饋你要怎麼賠給我😤💸給我注意一點💢！`;
+      } else {
+        xiuniText = "記好囉寶寶✨！這張卡還有很多回饋額度，算你聰明有聽咻妮的話，繼續買！買爆！💸❤️🔥";
+      }
+
+      const xiuniMsg: ChatMessage = {
+        id: `msg-xiuni-expense-${Date.now()}`,
+        role: 'assistant',
+        content: xiuniText,
+        timestamp: new Date()
+      };
+
+      // Optimistic UI updates
+      setMessages(prev => [...prev, xiuniMsg]);
+      setMobileTab('chat'); // ensure they see the chat response
+
+      if (user) {
+        dbService.addMessage(user.uid, TRIP_ID, xiuniMsg).catch(console.warn);
+      }
+
+    } catch (err) {
+      console.error("Expense check failed:", err);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   const renderContent = () => {
     switch (mobileTab) {
       case 'chat': return <ChatArea messages={messages} onSendMessage={handleSendMessage} isTyping={isTyping} />;
@@ -267,7 +330,21 @@ export default function MainApp() {
         </div>
 
         {/* Mobile Tab Bar */}
-        <nav className="lg:hidden shrink-0 border-t border-border bg-card/80 backdrop-blur-md pb-safe">
+        <nav className="lg:hidden shrink-0 border-t border-border bg-card/80 backdrop-blur-md pb-safe relative">
+          
+          {/* Floating Quick Action Button on Chat Tab */}
+          {mobileTab === 'chat' && (
+            <div className="absolute -top-14 right-4 animate-bounce-slow">
+              <button 
+                onClick={() => setIsExpenseSheetOpen(true)}
+                className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/30 text-white rounded-full font-bold flex items-center gap-2 transition-transform active:scale-95 z-50 text-sm"
+              >
+                <PlusCircle className="w-4 h-4" />
+                快速記帳
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-around items-center h-16 max-w-md mx-auto px-2">
             <TabItem icon={MessageCircle} label="對話" isActive={mobileTab === 'chat'} onClick={() => setMobileTab('chat')} />
             <TabItem icon={Footprints} label="今日足跡" isActive={mobileTab === 'footprint'} onClick={() => setMobileTab('footprint')} />
@@ -278,12 +355,30 @@ export default function MainApp() {
       </main>
 
       {/* Right Sidebar: Tabs Panel (Desktop Only) */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-[450px] lg:shrink-0 bg-muted/10 overflow-hidden shadow-[-4px_0_24px_-8px_rgba(0,0,0,0.05)] z-10 border-l border-border">
+      <aside className="hidden lg:flex lg:flex-col lg:w-[450px] lg:shrink-0 bg-muted/10 overflow-hidden shadow-[-4px_0_24px_-8px_rgba(0,0,0,0.05)] z-10 border-l border-border relative">
+        {/* Desktop Quick Action Button */}
+        <div className="absolute bottom-6 right-6 z-50">
+          <button 
+            onClick={() => setIsExpenseSheetOpen(true)}
+            className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/30 text-white rounded-full font-bold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
+          >
+            <PlusCircle className="w-5 h-5" />
+            新增花費
+          </button>
+        </div>
+
         <RightPanelTabs 
           expenses={expenses} entries={journeyEntries} locations={locations}
           travelPlan={travelPlan} postTripStatus={postTripStatus} phase={phase}
         />
       </aside>
+
+      {/* Forms & Modals */}
+      <ExpenseActionSheet 
+        isOpen={isExpenseSheetOpen} 
+        onClose={() => setIsExpenseSheetOpen(false)} 
+        onSubmit={handleExpenseSubmit!} 
+      />
     </div>
   );
 }
