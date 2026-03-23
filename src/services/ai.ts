@@ -104,7 +104,8 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 export async function processUserMessage(
   text: string,
   history: ChatMessage[],
-  currentPhase: 'idle' | 'planning' | 'traveling' | 'post_trip'
+  currentPhase: 'idle' | 'planning' | 'traveling' | 'post_trip',
+  imageUrl?: string
 ): Promise<{
   response: string,
   actionRequired?: 'open_expense_sheet',
@@ -146,11 +147,12 @@ LATEST USER MESSAGE:
 User: "${text}"
 
 INSTRUCTIONS:
-1. Identify intent strictly by user keywords:
+1. Identify intent strictly by user keywords OR attached images:
    - "幫我規劃" -> "plan_trip". **DO NOT** extract expenses/locations.
    - "玩完了" -> "finish_trip". **DO NOT** extract expenses/locations.
-   - "我今天", "記帳", "打卡", "花了" or answering a previous question about location/payment -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`. 
-      * If user logs an expense but doesn't specify HOW they paid or exact amount, your reply MUST set \`"actionRequired": "open_expense_sheet"\` and your \`response\` MUST say: "已幫你記錄到今日足跡及花費，寶寶來填一下詳細單子喔！" (in your Threads persona).
+   - If user ATTACHES AN IMAGE (like a receipt/food/place) OR says "我今天", "記帳", "打卡", "花了" or answers a previous question about location/payment -> "log_journey". **ONLY IN THIS INTENT** extract \`expenses\` and \`location\`. 
+      * IF AN IMAGE IS ATTACHED (Vision/OCR): You MUST vigorously read the receipt/image to extract the EXACT amount, currency, store name, and items. Combine this with the user's text to fully populate the \`expenses\` or \`location\` arrays!
+      * If user logs an expense but doesn't specify HOW they paid or exact amount (and it's not in the image), your reply MUST set \`"actionRequired": "open_expense_sheet"\` and your \`response\` MUST say: "已幫你記錄到今日足跡及花費，寶寶來填一下詳細單子喔！" (in your Threads persona).
       * If user specifies a credit card (e.g. J卡, 玫瑰卡), you MUST generate a 'limitWarning'. Playfully mock their remaining reward limit (e.g. "你的中信卡回饋快乾啦！", "J卡本月回饋大失血啦！").
       * If user DOES NOT specify a location, your reply MUST ask them where they are: "你今天在哪裡花這筆錢的啊？打卡一下啦！".
    - Default -> "chat". Return a general Threads-style 8+9 reply. **DO NOT** extract expenses/locations.
@@ -195,12 +197,26 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
 
+    const parts: any[] = [{ text: prompt }];
+
+    if (imageUrl) {
+      const match = imageUrl.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+      if (match) {
+        parts.push({
+          inlineData: {
+            mimeType: match[1],
+            data: match[2]
+          }
+        });
+      }
+    }
+
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts }],
         generationConfig: { responseMimeType: "application/json" }
       })
     });

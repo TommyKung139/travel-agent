@@ -147,7 +147,7 @@ export default function MainApp() {
             travelPlan: newPlan,
             postTripStatus: newPostTrip,
             newPhase
-          } = await processUserMessage(text, messages, phase);
+          } = await processUserMessage(text, messages, phase, imageUrl);
           
           // Strip out undefined fields so Firestore doesn't reject the save
           const finalUserMsg: ChatMessage = { ...tempUserMsg };
