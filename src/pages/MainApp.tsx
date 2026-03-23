@@ -129,72 +129,89 @@ export default function MainApp() {
     setIsTyping(true);
 
     try {
-      // Pass the entire history and current phase
-      const { 
-        response, 
-        expenses: newExpenses, 
-        location: newLocation,
-        travelPlan: newPlan,
-        postTripStatus: newPostTrip,
-        newPhase
-      } = await processUserMessage(text, messages, phase);
-      
-      // Strip out undefined fields so Firestore doesn't reject the save
-      const finalUserMsg: ChatMessage = { ...tempUserMsg };
-      if (newExpenses !== undefined) finalUserMsg.expenses = newExpenses;
-      if (newLocation !== undefined) finalUserMsg.location = newLocation;
-      
-      // Attempt to save to DB, but fallback to local state if it fails (e.g. no DB initialized)
-      let dbFailed = false;
-      if (user) {
-        try {
-           await dbService.addMessage(user.uid, TRIP_ID, finalUserMsg);
-           
-           const tripUpdate: any = { phase: newPhase };
-           if (newPlan !== undefined) tripUpdate.travelPlan = newPlan;
-           if (newPostTrip !== undefined) tripUpdate.postTripStatus = newPostTrip;
-           
-           await dbService.updateTripState(user.uid, TRIP_ID, tripUpdate);
-        } catch (dbErr) {
-           console.warn("Firestore save failed, falling back to local state:", dbErr);
-           dbFailed = true;
-        }
-      }
+      // MASTER TIMEOUT: Ensure the UI never hangs indefinitely, even if Firebase SDK or Fetch completely locks up
+      const masterTimeout = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error("Master UI Timeout Exceeded")), 25000)
+      );
 
-      if (!user || dbFailed) {
-         setMessages(prev => prev.map(m => m.id === finalUserMsg.id ? finalUserMsg : m));
-         if (newPlan) setTravelPlan(newPlan);
-         if (newPostTrip) setPostTripStatus(newPostTrip);
-         if (newPhase !== phase) setPhase(newPhase);
-      }
+      await Promise.race([
+        (async () => {
+          // Pass the entire history and current phase
+          const { 
+            response, 
+            expenses: newExpenses, 
+            location: newLocation,
+            travelPlan: newPlan,
+            postTripStatus: newPostTrip,
+            newPhase
+          } = await processUserMessage(text, messages, phase);
+          
+          // Strip out undefined fields so Firestore doesn't reject the save
+          const finalUserMsg: ChatMessage = { ...tempUserMsg };
+          if (newExpenses !== undefined) finalUserMsg.expenses = newExpenses;
+          if (newLocation !== undefined) finalUserMsg.location = newLocation;
+          
+          // Attempt to save to DB, but fallback to local state if it fails
+          let dbFailed = false;
+          if (user) {
+            try {
+               await dbService.addMessage(user.uid, TRIP_ID, finalUserMsg);
+               
+               const tripUpdate: any = { phase: newPhase };
+               if (newPlan !== undefined) tripUpdate.travelPlan = newPlan;
+               if (newPostTrip !== undefined) tripUpdate.postTripStatus = newPostTrip;
+               
+               await dbService.updateTripState(user.uid, TRIP_ID, tripUpdate);
+            } catch (dbErr) {
+               console.warn("Firestore save failed, falling back to local state:", dbErr);
+               dbFailed = true;
+            }
+          }
 
-      if (newPhase !== phase) {
-        // Automatically switch to Travel Plan tab if AI triggers planning or traveling
-        if (newPhase === 'planning' || newPhase === 'traveling' || newPhase === 'post_trip') {
-          setMobileTab('plan');
-        }
-      }
+          if (!user || dbFailed) {
+             setMessages(prev => prev.map(m => m.id === finalUserMsg.id ? finalUserMsg : m));
+             if (newPlan) setTravelPlan(newPlan);
+             if (newPostTrip) setPostTripStatus(newPostTrip);
+             if (newPhase !== phase) setPhase(newPhase);
+          }
 
-      const xiuniMsg: ChatMessage = {
-        id: `msg-xiuni-${Date.now()}`,
-        role: 'assistant',
-        content: response,
-        timestamp: new Date()
-      };
+          if (newPhase !== phase) {
+            // Automatically switch to Travel Plan tab if AI triggers planning or traveling
+            if (newPhase === 'planning' || newPhase === 'traveling' || newPhase === 'post_trip') {
+              setMobileTab('plan');
+            }
+          }
 
-      if (user && !dbFailed) {
-        try {
-          await dbService.addMessage(user.uid, TRIP_ID, xiuniMsg);
-        } catch (dbErr) {
-          console.warn("Firestore save failed for AI response, falling back to local state");
-          setMessages(prev => [...prev, xiuniMsg]);
-        }
-      } else {
-        setMessages(prev => [...prev, xiuniMsg]);
-      }
+          const xiuniMsg: ChatMessage = {
+            id: `msg-xiuni-${Date.now()}`,
+            role: 'assistant',
+            content: response,
+            timestamp: new Date()
+          };
+
+          if (user && !dbFailed) {
+            try {
+              await dbService.addMessage(user.uid, TRIP_ID, xiuniMsg);
+            } catch (dbErr) {
+              console.warn("Firestore save failed for AI response, falling back to local state");
+              setMessages(prev => [...prev, xiuniMsg]);
+            }
+          } else {
+            setMessages(prev => [...prev, xiuniMsg]);
+          }
+        })(),
+        masterTimeout
+      ]);
       
     } catch(err) {
-      console.error("Critical error in message handling:", err);
+      console.error("Critical error in message handling (likely timeout or network drop):", err);
+      // Fallback UI rescue message if EVERYTHING fails
+      setMessages(prev => [...prev, {
+        id: `msg-xiuni-rescue-${Date.now()}`,
+        role: 'assistant',
+        content: "嗚嗚...剛才好像有訊號干擾，我沒聽到！🥺 寶寶再說一次好嗎？",
+        timestamp: new Date()
+      }]);
     } finally {
       setIsTyping(false);
     }
