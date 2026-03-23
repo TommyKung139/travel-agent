@@ -35,11 +35,44 @@ export default function ChatArea({ messages, onSendMessage, isTyping, onOpenExpe
     setInput('');
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    onSendMessage('我今天花了一筆錢，這是收據，幫我記下來！', url);
+
+    // Client-side image compression to prevent Firestore limits and large API payloads
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIMENSION = 800; // Optimal for OCR & performance
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > MAX_DIMENSION) {
+          height *= MAX_DIMENSION / width;
+          width = MAX_DIMENSION;
+        } else if (height > MAX_DIMENSION) {
+          width *= MAX_DIMENSION / height;
+          height = MAX_DIMENSION;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const base64Url = canvas.toDataURL('image/jpeg', 0.8);
+          // Send compressed base64 image (typical size ~50-150KB)
+          onSendMessage('我今天花了一筆錢，這是收據，幫我記下來！', base64Url);
+        }
+      };
+      if (typeof event.target?.result === 'string') {
+        img.src = event.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
