@@ -201,14 +201,14 @@ Output ONLY a JSON object exactly matching this structure (no markdown fences):
         generationConfig: { responseMimeType: "application/json" }
       })
     });
-    clearTimeout(timeoutId);
-
     if (!res.ok) {
+       clearTimeout(timeoutId);
        console.error("Gemini API returned error:", await res.text());
        throw new Error("HTTP " + res.status);
     }
 
     const data = await res.json();
+    clearTimeout(timeoutId);
     let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     
     // Sometimes the LLM includes markdown fences even with responseMimeType

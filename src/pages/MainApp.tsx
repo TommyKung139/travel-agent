@@ -151,29 +151,22 @@ export default function MainApp() {
           if (newExpenses !== undefined) finalUserMsg.expenses = newExpenses;
           if (newLocation !== undefined) finalUserMsg.location = newLocation;
           
-          // Attempt to save to DB, but fallback to local state if it fails
-          let dbFailed = false;
+          // Phase 14: Fire-and-forget Firestore updates to prevent UI deadlocks if WebSocket connection is unstable
           if (user) {
-            try {
-               await dbService.addMessage(user.uid, TRIP_ID, finalUserMsg);
-               
-               const tripUpdate: any = { phase: newPhase };
-               if (newPlan !== undefined) tripUpdate.travelPlan = newPlan;
-               if (newPostTrip !== undefined) tripUpdate.postTripStatus = newPostTrip;
-               
-               await dbService.updateTripState(user.uid, TRIP_ID, tripUpdate);
-            } catch (dbErr) {
-               console.warn("Firestore save failed, falling back to local state:", dbErr);
-               dbFailed = true;
-            }
+            dbService.addMessage(user.uid, TRIP_ID, finalUserMsg).catch(err => console.warn("Background DB sync failed:", err));
+            
+            const tripUpdate: any = { phase: newPhase };
+            if (newPlan !== undefined) tripUpdate.travelPlan = newPlan;
+            if (newPostTrip !== undefined) tripUpdate.postTripStatus = newPostTrip;
+            
+            dbService.updateTripState(user.uid, TRIP_ID, tripUpdate).catch(err => console.warn("Background TripState sync failed:", err));
           }
 
-          if (!user || dbFailed) {
-             setMessages(prev => prev.map(m => m.id === finalUserMsg.id ? finalUserMsg : m));
-             if (newPlan) setTravelPlan(newPlan);
-             if (newPostTrip) setPostTripStatus(newPostTrip);
-             if (newPhase !== phase) setPhase(newPhase);
-          }
+          // ALWAYS update React UI State optimally right away
+          setMessages(prev => prev.map(m => m.id === finalUserMsg.id ? finalUserMsg : m));
+          if (newPlan) setTravelPlan(newPlan);
+          if (newPostTrip) setPostTripStatus(newPostTrip);
+          if (newPhase !== phase) setPhase(newPhase);
 
           if (newPhase !== phase) {
             // Automatically switch to Travel Plan tab if AI triggers planning or traveling
@@ -189,15 +182,11 @@ export default function MainApp() {
             timestamp: new Date()
           };
 
-          if (user && !dbFailed) {
-            try {
-              await dbService.addMessage(user.uid, TRIP_ID, xiuniMsg);
-            } catch (dbErr) {
-              console.warn("Firestore save failed for AI response, falling back to local state");
-              setMessages(prev => [...prev, xiuniMsg]);
-            }
-          } else {
-            setMessages(prev => [...prev, xiuniMsg]);
+          // Optimistically show AI response immediately
+          setMessages(prev => [...prev, xiuniMsg]);
+
+          if (user) {
+            dbService.addMessage(user.uid, TRIP_ID, xiuniMsg).catch(err => console.warn("Background AI msg sync failed:", err));
           }
         })(),
         masterTimeout
